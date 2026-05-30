@@ -1,0 +1,221 @@
+{% extends "base.html" %}
+{% block title %}Chat — Medi-Chat{% endblock %}
+
+{% block content %}
+<div class="flex flex-col h-screen">
+
+  <!-- Top nav -->
+  <header class="bg-white border-b border-gray-200 shadow-sm px-6 py-3 flex items-center justify-between shrink-0">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 bg-medical-600 rounded-xl flex items-center justify-center">
+        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+        </svg>
+      </div>
+      <div>
+        <h1 class="font-semibold text-gray-800 text-base leading-tight">Medi-Chat</h1>
+        <p class="text-xs text-gray-400">Medical Information Assistant</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <span class="text-sm text-gray-500 hidden sm:block">Hi, <strong>{{ current_user.username }}</strong></span>
+
+      <!-- Clear history -->
+      <button id="clearBtn" title="Clear chat history"
+        class="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+        </svg>
+      </button>
+
+      <!-- Logout -->
+      <a href="{{ url_for('logout') }}"
+        class="text-sm px-3 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition">
+        Logout
+      </a>
+    </div>
+  </header>
+
+  <!-- Messages -->
+  <div id="chatBox" class="flex-1 overflow-y-auto chat-scroll px-4 py-6 space-y-4">
+
+    {% if not history %}
+    <div id="welcomeMsg" class="flex flex-col items-center justify-center h-full text-center py-10">
+      <div class="w-16 h-16 bg-medical-100 rounded-full flex items-center justify-center mb-4">
+        <svg class="w-8 h-8 text-medical-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+            d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      </div>
+      <h2 class="text-xl font-semibold text-gray-700">How can I help you today?</h2>
+      <p class="text-gray-400 text-sm mt-2 max-w-sm">
+        Ask me anything about symptoms, medications, conditions, or general health information.
+      </p>
+      <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-md">
+        {% for suggestion in [
+          "What are the symptoms of diabetes?",
+          "How does ibuprofen work?",
+          "What is hypertension?",
+          "Common causes of headaches?"
+        ] %}
+        <button onclick="fillSuggestion(this.innerText)"
+          class="text-left px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-600 hover:border-medical-400 hover:bg-medical-50 transition shadow-sm">
+          {{ suggestion }}
+        </button>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    {% for msg in history %}
+      {% if msg.role == "user" %}
+      <div class="flex justify-end">
+        <div class="max-w-[75%] bg-medical-600 text-white px-4 py-3 rounded-2xl rounded-tr-sm text-sm shadow">
+          {{ msg.content }}
+        </div>
+      </div>
+      {% else %}
+      <div class="flex gap-3 items-start">
+        <div class="w-8 h-8 bg-medical-100 rounded-full flex items-center justify-center shrink-0 mt-0.5">
+          <svg class="w-4 h-4 text-medical-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+          </svg>
+        </div>
+        <div class="max-w-[75%] bg-white border border-gray-100 px-4 py-3 rounded-2xl rounded-tl-sm text-sm text-gray-700 shadow-sm leading-relaxed whitespace-pre-wrap">
+          {{ msg.content }}
+        </div>
+      </div>
+      {% endif %}
+    {% endfor %}
+
+    <!-- Typing indicator -->
+    <div id="typingIndicator" class="hidden flex gap-3 items-start">
+      <div class="w-8 h-8 bg-medical-100 rounded-full flex items-center justify-center shrink-0">
+        <svg class="w-4 h-4 text-medical-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+        </svg>
+      </div>
+      <div class="bg-white border border-gray-100 px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm flex gap-1.5 items-center">
+        <span class="typing-dot w-2 h-2 bg-gray-400 rounded-full block"></span>
+        <span class="typing-dot w-2 h-2 bg-gray-400 rounded-full block"></span>
+        <span class="typing-dot w-2 h-2 bg-gray-400 rounded-full block"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Disclaimer -->
+  <div class="bg-amber-50 border-t border-amber-100 px-4 py-1.5 text-center text-xs text-amber-700 shrink-0">
+    ⚕️ For informational purposes only — not a substitute for professional medical advice.
+  </div>
+
+  <!-- Input -->
+  <div class="bg-white border-t border-gray-200 px-4 py-4 shrink-0">
+    <form id="chatForm" class="flex gap-3 items-end max-w-4xl mx-auto">
+      <textarea id="userInput" rows="1"
+        placeholder="Ask a medical question…"
+        class="flex-1 resize-none px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-medical-500 text-sm transition max-h-36 overflow-y-auto leading-relaxed"
+        oninput="autoResize(this)"
+        onkeydown="handleKey(event)"></textarea>
+      <button type="submit" id="sendBtn"
+        class="w-11 h-11 bg-medical-600 hover:bg-medical-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-xl flex items-center justify-center transition shadow shrink-0">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+        </svg>
+      </button>
+    </form>
+  </div>
+</div>
+
+<script>
+  const chatBox = document.getElementById("chatBox");
+  const userInput = document.getElementById("userInput");
+  const sendBtn = document.getElementById("sendBtn");
+  const typingIndicator = document.getElementById("typingIndicator");
+
+  function scrollBottom() { chatBox.scrollTop = chatBox.scrollHeight; }
+  scrollBottom();
+
+  function autoResize(el) {
+    el.style.height = "auto";
+    el.style.height = Math.min(el.scrollHeight, 144) + "px";
+  }
+
+  function handleKey(e) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      document.getElementById("chatForm").dispatchEvent(new Event("submit"));
+    }
+  }
+
+  function fillSuggestion(text) {
+    userInput.value = text;
+    autoResize(userInput);
+    userInput.focus();
+  }
+
+  function esc(s) {
+    return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+
+  function appendMessage(role, text) {
+    const welcome = document.getElementById("welcomeMsg");
+    if (welcome) welcome.remove();
+    const wrap = document.createElement("div");
+    if (role === "user") {
+      wrap.className = "flex justify-end";
+      wrap.innerHTML = `<div class="max-w-[75%] bg-medical-600 text-white px-4 py-3 rounded-2xl rounded-tr-sm text-sm shadow">${esc(text)}</div>`;
+    } else {
+      wrap.className = "flex gap-3 items-start";
+      wrap.innerHTML = `
+        <div class="w-8 h-8 bg-medical-100 rounded-full flex items-center justify-center shrink-0 mt-0.5">
+          <svg class="w-4 h-4 text-medical-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+          </svg>
+        </div>
+        <div class="max-w-[75%] bg-white border border-gray-100 px-4 py-3 rounded-2xl rounded-tl-sm text-sm text-gray-700 shadow-sm leading-relaxed whitespace-pre-wrap">${esc(text)}</div>`;
+    }
+    chatBox.insertBefore(wrap, typingIndicator);
+    scrollBottom();
+  }
+
+  document.getElementById("chatForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const msg = userInput.value.trim();
+    if (!msg) return;
+    appendMessage("user", msg);
+    userInput.value = "";
+    userInput.style.height = "auto";
+    sendBtn.disabled = true;
+    typingIndicator.classList.remove("hidden");
+    scrollBottom();
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: msg }),
+      });
+      const data = await res.json();
+      typingIndicator.classList.add("hidden");
+      appendMessage("assistant", data.answer || data.error || "Something went wrong.");
+    } catch {
+      typingIndicator.classList.add("hidden");
+      appendMessage("assistant", "Network error. Please try again.");
+    } finally {
+      sendBtn.disabled = false;
+      userInput.focus();
+    }
+  });
+
+  document.getElementById("clearBtn").addEventListener("click", async () => {
+    if (!confirm("Clear all chat history?")) return;
+    await fetch("/api/history/clear", { method: "POST" });
+    location.reload();
+  });
+</script>
+{% endblock %}
